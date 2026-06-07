@@ -7,8 +7,9 @@ type Question = {
   body: string;
   author: string | null;
   votes: number;
+  quality_score: number;
+  duplicate_count: number;
 };
-
 export default function QuestionsList({
   initialQuestions,
   initialHasMore,
@@ -40,6 +41,24 @@ export default function QuestionsList({
 
     return () => clearTimeout(id); // cancel the pending timer on each keystroke
   }, [query]);
+
+  async function improveQuestion() {
+  if (!draft.trim()) return;
+
+  const res = await fetch("/api/improve", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      question: draft,
+    }),
+  });
+
+  const data = await res.json();
+
+  setDraft(data.improvedQuestion);
+}
 
   async function submit() {
     if (!draft.trim()) return;
@@ -88,22 +107,30 @@ export default function QuestionsList({
     <div className="space-y-5">
       {/* Ask box */}
       <div className="rounded-2xl border bg-surface p-4 shadow-sm">
-        <div className="flex gap-2">
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submit()}
-            placeholder="Ask a question…"
-            className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
-          />
-          <button
-            onClick={submit}
-            className="rounded-xl bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-strong"
-          >
-            Ask
-          </button>
-        </div>
-      </div>
+  <div className="flex gap-2">
+    <input
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => e.key === "Enter" && submit()}
+      placeholder="Ask a question…"
+      className="flex-1 rounded-xl border bg-background px-4 py-2.5 text-sm outline-none placeholder:text-muted focus:border-brand"
+    />
+
+    <button
+      onClick={submit}
+      className="rounded-xl bg-brand px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-brand-strong"
+    >
+      Ask
+    </button>
+
+    <button
+      onClick={improveQuestion}
+      className="rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-gray-100"
+    >
+      ✨ Improve
+    </button>
+  </div>
+</div>
 
       {/* Search + hydration status */}
       <div className="flex items-center gap-3">
@@ -135,11 +162,19 @@ export default function QuestionsList({
               </span>
             </button>
             <div className="min-w-0 flex-1 pt-0.5">
-              <p className="leading-snug">{q.body}</p>
-              {q.author && (
-                <p className="mt-1.5 text-xs text-muted">{q.author}</p>
-              )}
-            </div>
+  <p className="leading-snug">{q.body}</p>
+
+  <p className="mt-1 text-xs font-medium text-green-600">
+    ⭐ Quality Score: {q.quality_score}/100
+  </p>
+  <p className="mt-1 text-xs font-medium text-orange-600">
+  🔁 Similar Questions: {q.duplicate_count}
+</p>
+
+  {q.author && (
+    <p className="mt-1.5 text-xs text-muted">{q.author}</p>
+  )}
+</div>
           </li>
         ))}
       </ul>
